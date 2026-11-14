@@ -1,0 +1,31 @@
+Sorğuları icra etmək üçün PostgreSQL-də database və onun daxilində 'customers', 'orders' və 'order_items' cədvəllərini yaratdım. 
+Həm ilk tapşırıqda, həm də digər sorğularda istifadə etmək üçün yalnız 'delivered' statusuna malik sifarişləri seçən sorğu yazdım. 
+'date_trunc()' funksiyasından istifadə edərək hər müştərinin ilk alış ayını və sonrakı aylarda verdiyi sifarişlərin aylarını müəyyənləşdirdim. 
+Bununla da müştərinin ilk alışından neçə ay sonra yenidən sifariş verdiyini ayı görmək imkanım oldu. 
+'count(distinct)' və 'group by' istifadə edərək hər period üzrə unikal müştəri sayını hesabladım. 
+Periodu '0' olaraq filtrlədikdə müştərilərin ilk alış ayını və həmin aya uyğun digər göstəriciləri əldə etdim.
+İlk ayın müştəri sayını müəyyənləşdirdikdən sonra sonrakı aylardakı müştəri saylarından istifadə edərək hər periodun retention faizini hesabladım. 
+Bu hesablamanı CTE daxilində apardım və daha sonra 'case when' istifadə edərək hər periodu ayrıca sütunda göstərdim. 
+'avg()' funksiyası vasitəsilə hər period üzrə orta retention faizini hesabladım. Həmçinin ən yüksək və ən aşağı retention faizinə malik cohort-ları müəyyənləşdirdim. 
+Bunun üçün əvvəlcə alt sorğuda 'rank()' funksiyasından istifadə edərək retention faizlərini 'desc' və 'asc' ardıcıllığı ilə sıraladım. 
+Daha sonra hər iki sıralamada birinci yeri tutan cohort-ları seçərək maksimum və minimum nəticələri müəyyənləşdirdim. 
+Sonda 'status' sütunu yaradaraq onları 'Max' və 'Min' kimi işarələdim. 'total_revenue' göstəricisini hesablamaq üçün 'order_items' cədvəlindən istifadə edərək 
+ayrıca CTE yaratdım. Daha sonra 'order_id' üzrə qruplaşdırdığım satış gəlirlərini 'cohort_month' və 'between_month' əsasında qruplaşdıraraq 
+hər cohort-un müxtəlif periodlardakı ümumi gəlirini hesabladım. Bonus tapşırıqlarda 'case when' funksiyasından istifadə edərək hər period üzrə müştəri saylarını 
+matrix formasında göstərdim. Müştərilərin yaşadıqları ştatlara görə retention faizlərini analiz etmək üçün əvvəlki CTE sorğularına
+'customer_state' sütununu əlavə etdim və nəticələri ştatlar üzrə qruplaşdırdım. Kumulyativ gəliri hesablamaq üçün əvvəlcə 'total_revenue' göstəricisini 
+'cohort_month' və 'between_month' əsasında qruplaşdıran CTE yaratdım. Daha sonra 'sum() over(partition by cohort_month order by between_month)' funksiyasından 
+istifadə edərək hər cohort üzrə periodlar boyunca yığılan ümumi gəliri hesabladım.
+Daha sonra PostgreSQLi kodun məxfiliyini qoruyaraq pythona bağladım.Və SQL sorğularını dataframe formasında çap etdim.Vizuallaşdırma olaraq ratinglər üçün heatmap,
+İllər üzrə müştərilər üçün barchart və sonda ortalama ratinglərin period üzrə necə dəyişməsinə baxmaq üçün linechart istifadə etdim.
+
+
+Insight'lar:
+1. 'delivered' statuslu 96478 sətir var.
+2. Ən erkən cohort_month '01.09.2016' tarixinə təsadüf edir.
+3. Ən uzunmüddətli period '2016.10.01-2018.06.01' olmaqla 20 ayı əhatə edir. Bu hal 2 dəfə təkrarlanır.
+4. Ən çox unikal müştəri 7060 olmaqla 2017.11.01 tarixinə malik cohort ayına məxsusdur.
+5. Ratinglər üzrə 2017.10.01 cohort ayı tarixindən sonrakı ilk ay ən yüksək ratingə malikdir və dəyəri 0.72-dir.
+6. Ən minimum rating isə 0.18-lə 2017.02.01 cohort ayına məxsusdur.
+7. 972k revenue ilə 2017.11.01 cohort ayı elə ilk ayda ən çox satış edib.
+8. Line chart-a əsasən, 100% ratinglə başlayan period 1-ci aydan sonra kəskin şəkildə düşür və sabitləşir.
